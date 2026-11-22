@@ -1,52 +1,58 @@
-[1. GET 10 YEARS OF CLOSING PRICES]
-       │  Load past daily closing prices into Pandas
-       ▼
-[2. CONVERT TO DAILY PERCENTAGE CHANGES]
-       │  Use .pct_change().dropna() so you have a clean list
-       │  of ~2,500 daily percentage moves (your "hat of slips")
-       ▼
-[3. SPIN 10,000 FUTURES × 252 DAYS AT ONCE]
-       │  Use np.random.choice(past_returns, size=(10000, 252), replace=True)
-       │  No loops needed—creates a 10,000 × 252 grid of daily moves
-       ▼
-[4. COMPOUND ACROSS THE 252 DAYS]
-       │  Use np.cumprod(1 + random_returns, axis=1)
-       │  Starts at 1.0 and multiplies day-by-day across each row
-       ▼
-[5. CONVERT TO FINAL PERCENTAGE RETURNS]
-       │  Take the last column (Day 252) and subtract 1:
-       │  final_returns = growth_paths[:, -1] - 1
-       ▼
-[6. MEASURE THE ODDS & RISK]
-       │  From those 10,000 final 1-year return percentages, check:
-       │   • Median return (50th percentile)
-       │   • Worst 5% return (5th percentile) & Worst 1% return (1st percentile)
-       │   • % of simulated years that end negative (< 0%)
-       ▼
-[7. PLOT 2 CHARTS IN MATPLOTLIB]
-          • Chart 1: Line plot of the first 100 simulated paths over 252 days
-          • Chart 2: Histogram of all 10,000 final 1-year percentage returns
+# NIFTY 50 Non-Parametric Monte Carlo Simulator
 
+A quantitative risk-modeling engine built in Python that simulates **10,000 possible 1-year return trajectories** for the **NIFTY 50 (`^NSEI`)** using non-parametric historical bootstrapping[cite: 1, 2].
 
+Instead of assuming stock market returns follow a bell curve (normal distribution), this simulator samples directly from nearly two decades of actual NIFTY 50 daily moves—preserving real-world fat tails, market crashes, and compounding skewness[cite: 1, 2].
 
-Summary in own words
+---
 
-So basically, I took 10 year daily returns of NIFTY 50 index fund, cleaned up the closing prices, and used numpy to get 10,000 possibilities of a single year with 252 trading days, using historical bootstrapping method, next would use this data and compound it to get annual returns for all those 10,000 possibilities and get median, 5th percentile and 95th percentile changes and would basically infer from that whether its a good index fund to invest in
+## Key Simulation Results (10,000 Paths × 252 Trading Days)
 
+| Metric | Value | Interpretation |
+| :--- | :--- | :--- |
+| **Median 1-Year Return (50th pct)** | **+10.68%** | Typical, middle-of-the-road 1-year return without extreme bull or bear outliers. |
+| **Mean 1-Year Return (Average)** | **+13.09%** | **+2.41% higher than the Median**, confirming **positive skewness** driven by compounded bull-market runs. |
+| **95% Value at Risk (5th pct)** | **-21.54%** | Worst-case loss threshold in a 1-in-20 bad year (95% of simulated futures ended better than `-21.54%`). |
+| **99% Value at Risk (1st pct)** | **-32.29%** | Extreme tail-risk drawdown in a 1-in-100 crash scenario. |
+| **95th Percentile (Upside Tail)** | **+55.85%** | Top-5% bull-market outcome—more than **2.5×** the magnitude of the 5th-percentile downside risk (`-21.54%`). |
+| **Probability of Loss (`< 0%`)** | **31.48%** | Roughly **1 in 3 simulated 1-year periods** ended in the red, highlighting short-horizon equity volatility. |
 
+---
 
+## How It Works
 
+1. **Historical Data Ingestion (`yfinance`):** Downloads daily closing prices for `^NSEI` from September 2007 through December 2025 (`4,487` raw trading days)[cite: 1, 2].
+2. **Return Pool Construction:** Computes daily percentage changes (`pct_change()`) and drops missing values (`dropna()`) to build an empirical pool of `4,486` historical daily returns[cite: 1, 2].
+3. **Vectorized Historical Bootstrapping:** Uses `np.random.choice(..., size=(252, 10000), replace=True)` to generate 10,000 independent 1-year trading sequences without Python loops[cite: 1, 2].
+4. **Geometric Compounding:** Multiplies daily growth factors across all 252 trading days via `np.cumprod(1 + r, axis=0)` and subtracts `1` at day 252 to extract final 1-year percentage returns[cite: 1, 2].
+5. **Risk & Distribution Analytics:** Evaluates Median vs. Mean skewness, empirical 95% and 99% Value at Risk (VaR), 95th-percentile upside, and overall loss probability.
 
+---
 
-General Info to prevent misunderstandings:
-Skewness: Measure of which side the data is concentrated more comparing it to median
-Positive: Mean > Median, means crazy bull years pulled the number up; More Bullish: So investing can be considered a good choice
-Negative: Median > Mean, means crazy bear years were there; So investing should be considered and talked about thoughtfully.
+## Tech Stack
+* **Python 3**[cite: 1, 2]
+* **NumPy** — Vectorized bootstrap sampling, cumulative product compounding, and statistical metrics[cite: 1, 2]
+* **Pandas** — Time-series cleaning, percentage return calculation, and DataFrame manipulation[cite: 1, 2]
+* **yfinance** — Historical market data retrieval for `^NSEI`[cite: 1, 2]
 
+---
 
-Median: Tells about the average year looks like, cuz its at the middle of those 10,000 values, above it all bullish and below it all bearish
-Compare the top 5th percentile(95 percentile) and bottom 5 percentile to understand about whether the risk is worth taking or not
-Probability of loss, basically tells us what are the chances of losing the money (Out of those 10,000: how many ended below 0%)
-We dont use mean to find about average year returns as extreme outliers tend to shift it
-VaR is calculated post sorting and looking at bottom values to understand what is the worst that could happen
+## Model Assumptions & Limitations
+* **i.i.d. Sampling (No Volatility Clustering):** Drawing individual days independently breaks multi-day autocorrelation—in real markets, high-volatility panic days tend to cluster together rather than appearing randomly.
+* **Stationarity:** Assumes the statistical behavior of 2007–2025 NIFTY 50 returns remains representative of future market regimes.
+* **Price Return Only:** Uses index closing prices (`^NSEI`), excluding dividend yields, taxes, and transaction costs[cite: 1, 2].
 
+---
+
+## Getting Started
+
+```bash
+# Clone the repository
+git clone [https://github.com/YOUR_USERNAME/nifty50-monte-carlo-simulator.git](https://github.com/YOUR_USERNAME/nifty50-monte-carlo-simulator.git)
+cd nifty50-monte-carlo-simulator
+
+# Install dependencies
+pip install numpy pandas yfinance jupyter
+
+# Launch the notebook
+jupyter notebook nifty50_monte_carlo_simulator.ipynb
